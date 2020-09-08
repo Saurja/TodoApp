@@ -1,5 +1,6 @@
 let express = require('express')
 let mongodb = require('mongodb');
+let sanitizeHTML = require('sanitize-html')
 
 let app = express()
 let db
@@ -19,6 +20,17 @@ app.use(express.json())
 app.use(express.urlencoded({
     extended: false
 }))
+
+function passwordProtected(req, res, next) {
+    res.set('WWW-Authenticate', 'Basic realm="Simple Todo APP"')
+    if(req.headers.authorization == "Basic U2F1cmphOkdob3No") {
+        next()
+    } else {
+        res.status(401).send("Authentication Required")
+    }
+}
+
+app.use(passwordProtected)
 
 app.get('/', function (req, res) {
     db.collection('items').find().toArray(function (err, items) {
@@ -44,18 +56,13 @@ app.get('/', function (req, res) {
   </div>
   
   <ul id="item-list" class="list-group pb-5">
-    ${items.map(function(item) {
-      return `<li class="list-group-item list-group-item-action d-flex align-items-center justify-content-between">
-      <span class="item-text">${item.text}</span>
-      <div>
-      <button data-id="${item._id}" class="edit-me btn btn-secondary btn-sm mr-1">Edit</button>
-      <button data-id="${item._id}" class="delete-me btn btn-danger btn-sm">Delete</button>
-      </div>
-      </li>`
-    }).join('')}
   </ul>
   
   </div>
+  
+  <script>
+  let items = ${JSON.stringify(items)}
+  </script>
   
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <script src="/browser.js"></script>
@@ -68,8 +75,9 @@ app.get('/', function (req, res) {
 
 //Create
 app.post('/create-item', function (req, res) {
+    let safeText = sanitizeHTML(req.body.text, { allowedTags: [], allowedAttributes: {} })
     db.collection('items').insertOne({
-        text: req.body.text
+        text: safeText
     }, function (err, info) {
         res.json(info.ops[0])
     })
@@ -77,11 +85,12 @@ app.post('/create-item', function (req, res) {
 
 //Update
 app.post('/update-item', function (req, res) {
+    let safeText = sanitizeHTML(req.body.text, { allowedTags: [], allowedAttributes: {} })
     db.collection('items').findOneAndUpdate({
         _id: new mongodb.ObjectID(req.body.id)
     }, {
         $set: {
-            text: req.body.text
+            text: safeText
         }
     }, function () {
         res.send("Success")
