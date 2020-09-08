@@ -12,6 +12,7 @@ mongodb.connect(connectionString, {useNewUrlParser: true, useUnifiedTopology: tr
     app.listen(3000)
 })
 
+app.use(express.json())
 app.use(express.urlencoded({extended: false}))
 
 app.get('/', function(req, res) {
@@ -51,6 +52,7 @@ app.get('/', function(req, res) {
   
   </div>
   
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <script src="/browser.js"></script>
 
   </body>
@@ -62,5 +64,10 @@ app.post('/create-item', function(req, res) {
     db.collection('items').insertOne({ text: req.body.item }, function() {
         res.redirect('/')
     });
+})
+
+app.post('/update-item', function(req, res) {
+  console.log(req.body.text)
+  res.send("Success")
 })
 
